@@ -1,0 +1,10 @@
+# Windows 批处理必须是 CRLF 且为 GBK 编码，否则 cmd 解析中文会出错。
+# Git 默认在 checkout 时可能转成 LF，这里把换行锁死。
+# 注意：仓库里的 .bat 是 GBK 编码，不是 UTF-8，编辑时请保持原编码。
+*.bat text eol=crlf
+
+*.js   text eol=lf
+*.css  text eol=lf
+*.json text eol=lf
+*.py   text eol=lf
+*.md   text eol=lf

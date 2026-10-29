@@ -1,0 +1,348 @@
+/* ───────────── 字幕叠加层（单行） ───────────── */
+.bz-sub-layer {
+  position: absolute;
+  left: 50%;
+  bottom: 7%;
+  transform: translateX(-50%);
+  width: 90%;
+  max-width: 1180px;
+  display: flex;
+  justify-content: center;
+  z-index: 55;
+  pointer-events: none;
+  text-align: center;
+  font-family: "PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+  --bz-font-size: 22px;
+}
+
+.bz-sub-line {
+  margin: 0;
+  padding: 3px 14px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: var(--bz-font-size);
+  font-weight: 500;
+  line-height: 1.4;
+  letter-spacing: 0.2px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+  word-break: break-word;
+  max-width: 100%;
+  transition: opacity 0.12s ease;
+  backdrop-filter: blur(1px);
+}
+
+/* 没有字幕时整行隐藏，避免留下一块空的黑底 */
+.bz-sub-line.bz-empty {
+  background: transparent;
+  backdrop-filter: none;
+  padding: 0;
+  text-shadow: none;
+}
+
+/* 全屏时略微上移，避开控制条 */
+.bpx-player-container[data-screen="full"] .bz-sub-layer,
+.bpx-player-container[data-screen="web"] .bz-sub-layer {
+  bottom: 9%;
+  width: 86%;
+}
+
+/* ───────────── 悬浮按钮 ───────────── */
+/* ───────────── 一次性轻提示（让路等静默事件用） ───────────── */
+.bz-sub-hint {
+  position: fixed;
+  left: 50%;
+  bottom: 148px;
+  transform: translateX(-50%);
+  z-index: 2147483000;
+  max-width: min(760px, 86vw);
+  padding: 10px 18px;
+  border-radius: 10px;
+  background: rgba(24, 24, 27, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #f2f2f3;
+  font-size: 14px;
+  line-height: 1.6;
+  text-align: center;
+  pointer-events: none;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+}
+
+/* 「让路」状态条：有官方字幕时留在页面下方的一条说明 + 两个出口。
+   不用 pointer-events:none —— 这上面有按钮要能点。 */
+.bz-sub-yield {
+  position: fixed;
+  left: 50%;
+  bottom: 96px;
+  transform: translateX(-50%);
+  z-index: 2147483001;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: min(880px, 92vw);
+  padding: 9px 12px 9px 16px;
+  border-radius: 999px;
+  background: rgba(24, 24, 27, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #f2f2f3;
+  font-size: 13px;
+  line-height: 1.4;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.38);
+  white-space: nowrap;
+}
+
+.bz-sub-yield .bz-y-text {
+  color: #e8e8ea;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bz-sub-yield button {
+  flex: none;
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.08);
+  color: #f2f2f3;
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.bz-sub-yield button:hover {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.34);
+}
+
+/* 主出口：改用 AI 字幕，用 B站 粉强调一下 */
+.bz-sub-yield button[data-act="force"] {
+  background: #fb7299;
+  border-color: #fb7299;
+  color: #fff;
+  font-weight: 600;
+}
+
+.bz-sub-yield button[data-act="force"]:hover {
+  background: #e75f85;
+  border-color: #e75f85;
+}
+
+.bz-sub-yield button.bz-y-close {
+  padding: 0;
+  width: 22px;
+  height: 22px;
+  line-height: 20px;
+  border-color: transparent;
+  background: transparent;
+  color: #b9b9be;
+  font-size: 16px;
+}
+
+.bz-sub-fab {
+  position: fixed;
+  right: 18px;
+  bottom: 120px;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(24, 24, 27, 0.82);
+  color: #9a9aa5;
+  font-size: 15px;
+  font-weight: 500;
+  font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+  cursor: pointer;
+  z-index: 2147483000;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  user-select: none;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.bz-sub-fab:hover {
+  transform: scale(1.08);
+  background: rgba(40, 40, 46, 0.95);
+}
+
+/* ───────────── 控制面板 ───────────── */
+.bz-sub-panel {
+  position: fixed;
+  right: 18px;
+  bottom: 168px;
+  width: 258px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 12px;
+  background: rgba(22, 22, 26, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
+  color: #e9e9ee;
+  font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-size: 13px;
+  z-index: 2147483001;
+  backdrop-filter: blur(8px);
+}
+
+.bz-p-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.bz-p-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #c9c9d4;
+}
+
+.bz-p-close {
+  background: none;
+  border: none;
+  color: #9a9aa5;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+}
+
+.bz-p-close:hover {
+  color: #fff;
+}
+
+.bz-p-status {
+  font-size: 12px;
+  color: #b8b8c4;
+  line-height: 1.5;
+  word-break: break-word;
+  max-height: 54px;
+  overflow: hidden;
+}
+
+.bz-p-status.bz-error {
+  color: #ff8a8a;
+}
+
+.bz-p-bar {
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.bz-p-bar > i {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: #378add;
+  transition: width 0.3s ease;
+}
+
+.bz-p-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: #cfcfd8;
+  cursor: pointer;
+}
+
+.bz-p-row > span {
+  flex: 0 0 auto;
+}
+
+.bz-p-row input[type="checkbox"] {
+  width: 30px;
+  height: 16px;
+  accent-color: #378add;
+  cursor: pointer;
+}
+
+.bz-p-row input[type="range"] {
+  flex: 1;
+  accent-color: #378add;
+  cursor: pointer;
+}
+
+.bz-p-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.bz-p-actions button {
+  padding: 6px 4px;
+  font-size: 12px;
+  border-radius: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: #dcdce4;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.bz-p-actions button:hover {
+  background: rgba(55, 138, 221, 0.22);
+  border-color: rgba(55, 138, 221, 0.5);
+}
+
+/* ───────────── 确认提示条 ───────────── */
+.bz-sub-prompt {
+  position: fixed;
+  left: 50%;
+  top: 76px;
+  transform: translateX(-50%);
+  width: 360px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: rgba(22, 22, 26, 0.97);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  color: #e9e9ee;
+  font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+  z-index: 2147483002;
+}
+
+.bz-sp-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #e9e9ee;
+  margin-bottom: 6px;
+}
+
+.bz-sp-body {
+  font-size: 12.5px;
+  color: #b8b8c4;
+  line-height: 1.7;
+  margin-bottom: 12px;
+}
+
+.bz-sp-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.bz-sp-actions button {
+  padding: 6px 14px;
+  font-size: 12.5px;
+  border-radius: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: #dcdce4;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.bz-sp-actions button[data-act="primary"] {
+  background: #378add;
+  border-color: #378add;
+  color: #fff;
+}
+
+.bz-sp-actions button:hover {
+  filter: brightness(1.1);
+}

@@ -1,0 +1,8 @@
+flask>=3.0.0
+flask-cors>=4.0.0
+requests>=2.31.0
+faster-whisper>=1.1.0
+
+# PyAV 19 移除了 av.open(metadata_errors=...) 参数，而 faster-whisper 1.2.x
+# 仍在传它，装上 av 19 会在解码阶段直接 TypeError。必须压在 19 以下。
+av>=12,<19

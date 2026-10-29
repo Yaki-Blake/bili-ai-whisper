@@ -1,0 +1,52 @@
+{
+  "manifest_version": 3,
+  "name": "Bili 本地字幕补全",
+  "version": "0.3.1",
+  "description": "B站无字幕视频的本地转写字幕：有官方字幕时自动让路（可一键切换），没字幕时用本地 Whisper 边转边出。",
+  "minimum_chrome_version": "111",
+  "permissions": [
+    "storage",
+    "scripting",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://www.bilibili.com/*",
+    "https://api.bilibili.com/*",
+    "https://*.hdslb.com/*",
+    "http://127.0.0.1:8765/*",
+    "http://localhost:8765/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.bilibili.com/*"
+      ],
+      "js": [
+        "content/bridge.js"
+      ],
+      "world": "MAIN",
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.bilibili.com/*"
+      ],
+      "js": [
+        "content/content.js"
+      ],
+      "css": [
+        "content/content.css"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "Bili 本地字幕补全"
+  },
+  "options_page": "options/options.html"
+}

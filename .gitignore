@@ -1,0 +1,13 @@
+# 依赖与虚拟环境
+server/.venv/
+__pycache__/
+*.py[cod]
+
+# 运行时产物（不要提交）
+server/server.log
+server/config.json
+*.log
+
+# 模型与缓存
+models/
+.cache/
