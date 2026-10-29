@@ -29,7 +29,7 @@ _lock = threading.Lock()
 
 def cache_dir() -> Path:
     root = os.environ.get("LOCALAPPDATA") or os.path.expanduser("~/.cache")
-    d = Path(root) / "bili-sub" / "cache"
+    d = Path(root) / "bili-ai-whisper" / "cache"
     d.mkdir(parents=True, exist_ok=True)
     return d
 

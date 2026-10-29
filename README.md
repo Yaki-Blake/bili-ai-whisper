@@ -2,14 +2,14 @@
   <b>简体中文</b> · <a href="README.en.md">English</a>  
 </p>
 
-# Bili 本地字幕补全
+# bili-ai-whisper
 
-给 B站没有字幕的视频补中文字幕，转写全程在本机完成，音频不上传。
+B站本地字幕补全 —— 给没有字幕的视频补中文字幕，转写全程在本机完成，音频不上传。
 
 ## 1. 文件结构
 
 ```
-bili-sub/
+bili-ai-whisper/
 ├── 启动字幕服务.bat        一键启动（转调 server\run.bat）
 ├── extension/              浏览器扩展（MV3）
 │   ├── manifest.json       版本、权限、脚本声明

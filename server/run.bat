@@ -7,7 +7,7 @@ set "MIRROR=https://mirrors.aliyun.com/pypi/simple"
 set "HF_ENDPOINT=https://hf-mirror.com"
 
 echo ============================================
-echo   Bili 本地字幕服务
+echo   bili-ai-whisper 本地字幕服务
 echo ============================================
 
 if not exist ".venv\Scripts\python.exe" (

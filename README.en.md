@@ -2,14 +2,14 @@
   <a href="README.md">简体中文</a> · <b>English</b>  
 </p>
 
-# Bili Local Subtitle
+# bili-ai-whisper
 
-Chinese subtitles for Bilibili videos that have none. Everything runs locally — audio is never uploaded.
+Bilibili local subtitle filler — Chinese subtitles for videos that have none. Everything runs locally, audio is never uploaded.
 
 ## 1. Layout
 
 ```
-bili-sub/
+bili-ai-whisper/
 ├── 启动字幕服务.bat        one-click launcher (calls server\run.bat)
 ├── extension/              browser extension (MV3)
 │   ├── manifest.json       version, permissions, script declarations

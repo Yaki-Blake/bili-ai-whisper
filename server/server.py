@@ -340,14 +340,14 @@ def get_diag():
 
 @app.get("/")
 def index():
-    return jsonify({"service": "bili-sub", "endpoints": ["/health", "/asr", "/asr/status", "/asr/cancel", "/config", "/diag"]})
+    return jsonify({"service": "bili-ai-whisper", "endpoints": ["/health", "/asr", "/asr/status", "/asr/cancel", "/config", "/diag"]})
 
 
 if __name__ == "__main__":
     cfg = config.load()
     port = int(cfg.get("port", 8765))
     print("=" * 56)
-    print("  Bili 本地字幕服务")
+    print("  bili-ai-whisper · 本地字幕服务")
     print(f"  监听  http://127.0.0.1:{port}")
     print(f"  模型  {cfg.get('default_model', 'small')} / {cfg.get('device', 'cpu')}")
     print(f"  ASR   {'就绪' if asr.available() else '未安装 faster-whisper'}")
