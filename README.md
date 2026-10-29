@@ -1,3 +1,7 @@
+<p align="center">
+  <b>简体中文</b> · <a href="README.en.md">English</a>
+</p>
+
 # Bili 本地字幕补全
 
 给 B站**没有字幕的视频**补中文字幕。转写全程在你自己电脑上完成，音频不上传。
