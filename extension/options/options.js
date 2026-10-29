@@ -27,10 +27,8 @@ async function loadExt() {
 
 async function loadServer() {
   try {
-    const c = await send('config:get');
-    $('defaultModel').value = c.default_model || 'small';
-    $('device').value = c.device || 'cpu';
-    $('computeType').value = c.compute_type || 'int8';
+    // 唯一后端，没有可调的识别参数；这次调用只为确认服务端配置接口可达
+    await send('config:get');
   } catch (err) {
     toast('toastSave', `读取服务端配置失败：${err.message}`, true);
   }
@@ -43,25 +41,11 @@ async function save() {
         serviceUrl: $('serviceUrl').value.trim() || 'http://127.0.0.1:8765',
         fontSize: Number($('fontSize').value) || 22,
         enabled: $('enabled').value === 'true',
-        asrModel: $('defaultModel').value,
       },
     });
+    toast('toastSave', '已保存');
   } catch (err) {
     toast('toastSave', `扩展设置保存失败：${err.message}`, true);
-    return;
-  }
-
-  try {
-    await send('config:set', {
-      patch: {
-        default_model: $('defaultModel').value,
-        device: $('device').value,
-        compute_type: $('computeType').value,
-      },
-    });
-    toast('toastSave', '已保存。重启服务后识别参数生效。');
-  } catch (err) {
-    toast('toastSave', `服务端配置保存失败：${err.message}（扩展设置已保存）`, true);
   }
 }
 
@@ -71,7 +55,7 @@ $('btnPing').addEventListener('click', async () => {
     const d = await send('service:ping');
     toast(
       'toastPing',
-      d.asr_ready ? `在线 · ${d.asr_model} · ${d.device}` : '在线，但未安装 faster-whisper',
+      d.asr_ready ? `在线 · ${d.asr_model} · ${d.device}` : `在线，但后端未就绪：${d.error || 'sherpa-onnx 不可用'}`,
       !d.asr_ready,
     );
   } catch (err) {
@@ -84,10 +68,6 @@ $('btnReload').addEventListener('click', async () => {
   await loadExt();
   await loadServer();
   toast('toastSave', '已重新读取');
-});
-
-$('device').addEventListener('change', (e) => {
-  $('computeType').value = e.target.value === 'cuda' ? 'float16' : 'int8';
 });
 
 (async () => {

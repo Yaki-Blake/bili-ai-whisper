@@ -6,7 +6,7 @@
 
 Bilibili local subtitle filler — Chinese subtitles for videos that have none. Everything runs locally, audio is never uploaded.
 
-The default backend is **SenseVoice-Small** (more accurate on Chinese than whisper, roughly 25–35× realtime on CPU). It falls back to faster-whisper automatically when unavailable.
+The backend is **SenseVoice-Small** only (more accurate on Chinese than whisper, roughly 25–35× realtime on CPU). v0.4.1 dropped the faster-whisper fallback, cutting the dependency footprint from ~343 MB to ~205 MB.
 
 ## 1. Layout
 
@@ -24,7 +24,7 @@ bili-ai-whisper/
 │   └── options/            options page
 └── server/                 local server (Flask)
     ├── server.py           routes + job queue
-    ├── asr.py              backend dispatch, whisper wrapper, hallucination filtering
+    ├── asr.py              decode entry point, SenseVoice dispatch, loud failure
     ├── asr_sensevoice.py   SenseVoice chunked decoding, sentence splitting
     ├── audio_util.py       decodes everything to 16k mono
     ├── bili.py             audio download, signing fallback
@@ -44,9 +44,9 @@ bili-ai-whisper/
 
 **Start the server**
 
-Double-click `server\run.bat`. First run downloads about 630 MB in total:
+Double-click `server\run.bat`. First run downloads about 430 MB in total:
 
-- Python dependencies　~400 MB
+- Python dependencies　~200 MB (Flask, requests, PyAV, sherpa-onnx, numpy)
 - The SenseVoice model　~228 MB
 
 You are ready when you see:
@@ -82,15 +82,13 @@ Click the ball to change font size, re-run, export SRT or clear the cache.
 **Performance**
 
 - SenseVoice runs at ~25–35× realtime: a 20-minute video takes ~40 s, a 50-minute one ~90 s. Measured end to end: 176 s of audio in 6.6 s, model load included
-- The faster-whisper fallback only manages 2–8× realtime and will fall behind playback
 - Decoding loads the whole track into memory: ~230 MB for one hour of audio
 
 **Environment traps (handled in code, may reappear on another machine)**
 
 - Some Edge builds **globally refuse extension injection** and return `Blocked` on every site, unrelated to the code — switch to Chrome
 - With Windows console QuickEdit on, selecting text with the mouse freezes every request. stdout is redirected to `server.log` to work around it
-- VAD on this machine classified speech as silence and emitted a single line. Off by default
-- Model loading used to verify over the network and failed on any hiccup. Now loaded straight from the local path
+- The SenseVoice model is fetched over plain HTTP (no huggingface_hub any more); flaky networks can still interrupt it. Mitigated with `.part` staging plus three retries
 - SenseVoice token timestamps drift on "long chunk + long silence" — a 10-second line can be labelled 25 seconds. Fixed with 20-second chunks plus a break on any pause over 2 seconds
 
 ## 4. How the code works
@@ -103,9 +101,10 @@ content.js  isolated world: detects official subtitles → stands down or starts
    │ chrome.runtime
 background  only forwards short requests to localhost:8765
    │ HTTP
-server.py   downloads the audio track → dispatches by backend → returns cues incrementally
-              ├─ SenseVoice (default)  20-second chunks, split on punctuation and pauses
-              └─ faster-whisper       fallback, never reached once sherpa-onnx is installed
+server.py   downloads the audio track → hands it to asr → returns cues incrementally
+   │
+asr.py      decodes (PyAV → 16k mono) → SenseVoice in 20-second chunks, split on
+            punctuation and pauses; missing deps raise instead of silently degrading
 ```
 
 ## 5. Disclaimer

@@ -21,7 +21,7 @@ async function refreshStatus() {
     const d = await send('service:ping');
     if (!d.asr_ready) {
       box.className = 'status bad';
-      box.textContent = `服务在线，但 faster-whisper 未安装 · 扩展 v${VER}`;
+      box.textContent = `服务在线，但转写后端未就绪：${d.error || 'sherpa-onnx 不可用'} · 扩展 v${VER}`;
       return;
     }
     box.className = 'status ok';

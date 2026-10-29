@@ -6,7 +6,7 @@
 
 B站本地字幕补全 —— 给没有字幕的视频补中文字幕，转写全程在本机完成，音频不上传。
 
-默认后端是 **SenseVoice-Small**（中文比 whisper 更准，CPU 上约 25–35 倍实时），环境不支持时自动退回 faster-whisper。
+唯一后端是 **SenseVoice-Small**（中文比 whisper 更准，CPU 上约 25–35 倍实时）。v0.4.1 起移除了 faster-whisper 兜底链，依赖体积从约 343 MB 降到约 205 MB。
 
 ## 1. 文件结构
 
@@ -24,7 +24,7 @@ bili-ai-whisper/
 │   └── options/            设置页
 └── server/                 本地服务（Flask）
     ├── server.py           路由 + 任务队列
-    ├── asr.py              后端分发、whisper 封装、幻觉过滤
+    ├── asr.py              解码入口、SenseVoice 调度、不可用时报错
     ├── asr_sensevoice.py   SenseVoice 分块识别、按标点与停顿切句
     ├── audio_util.py       统一解码成 16k 单声道
     ├── bili.py             音频下载、签名兜底
@@ -44,9 +44,9 @@ bili-ai-whisper/
 
 **起服务**
 
-双击 `server\run.bat`。首次运行会下载，共约 630 MB：
+双击 `server\run.bat`。首次运行会下载，共约 430 MB：
 
-- Python 依赖　约 400 MB
+- Python 依赖　约 200 MB（只有 Flask / requests / PyAV / sherpa-onnx，外加 numpy）
 - SenseVoice 模型　约 228 MB
 
 看到下面这段就成了：
@@ -82,15 +82,13 @@ bili-ai-whisper/
 **性能**
 
 - SenseVoice 约 25–35 倍实时：20 分钟视频约 40 秒，50 分钟约 90 秒。实测 176 秒音频端到端 6.6 秒（含模型加载）
-- 退回 whisper 后备时只有 2–8 倍实时，会明显跟不上播放
 - 长音频解码要一次性读进内存：1 小时音频约 230 MB
 
 **环境坑（代码里已规避，换机器可能复现）**
 
 - 部分 Edge 会**全局拒绝扩展注入**，任何站点都返回 `Blocked`，与代码无关 —— 换 Chrome
 - Windows 控制台开「快速编辑」后，鼠标一选中文字，服务所有请求都会卡死。已把 stdout 重定向到 `server.log` 规避
-- VAD 在本机会把人声判成静音，只出 1 句。默认已关闭
-- 模型加载若走联网校验，网络一抖就起不来。已改为本地路径直载
+- SenseVoice 的模型走 HTTP 直连下载（不再经 huggingface_hub），网络抖动仍可能中断；已做 `.part` 落盘 + 三次重试
 - SenseVoice 的 token 时间戳在「长块 + 长静音」下会漂移，一句 10 秒的话可能标成 25 秒。已改成 20 秒分块 + 停顿超 2 秒断句
 
 ## 4. 代码逻辑
@@ -102,9 +100,10 @@ content.js  隔离世界：判断有无官方字幕 → 让路或起转写，rAF
    │ chrome.runtime
 background  只转发短请求到 localhost:8765
    │ HTTP
-server.py   下载音轨 → 按 backend 分发 → 按句增量返回
-              ├─ SenseVoice（默认）  20 秒分块，按标点与停顿切句
-              └─ faster-whisper     兜底，装了 sherpa-onnx 就不会走到
+server.py   下载音轨 → 交给 asr → 按句增量返回
+   │
+asr.py      解码（PyAV → 16k 单声道）→ SenseVoice 20 秒分块，按标点与停顿切句
+            依赖缺失直接抛错，不再静默降级
 ```
 
 ## 5. 免责声明

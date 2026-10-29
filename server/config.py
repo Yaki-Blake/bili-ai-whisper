@@ -10,19 +10,11 @@ BASE_DIR = Path(__file__).resolve().parent
 CONFIG_PATH = BASE_DIR / "config.json"
 
 DEFAULTS = {
-    # auto    优先 SenseVoice（中文更准、CPU 更快），不可用时自动退回 whisper
-    # sensevoice / whisper 强制指定，便于对照排查
-    "backend": "auto",
-    "default_model": "small",
+    # 只剩 SenseVoice 一个后端。原来的 backend / default_model / vad / beam_size
+    # 都是给 faster-whisper 用的，v0.4.1 随兜底链一起移除，留着只会误导。
     "device": "cpu",
     "compute_type": "int8",
     "port": 8765,
-    # 实测本机 silero VAD 会把大量人声判成静音，默认关闭。
-    # 换机器或换 onnxruntime 版本后可改成 True 再试。
-    "vad": False,
-    # 实测 beam 5→1 转写快 1.7 倍（2.3x → 3.9x 实时），且该样本上首句反而更准。
-    # cpu_threads 调成 8 没有提升，保持自动。
-    "beam_size": 1,
     # huggingface 镜像，国内直连 huggingface.co 基本下不动模型
     "hf_endpoint": "https://hf-mirror.com",
 }

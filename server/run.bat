@@ -28,9 +28,9 @@ if not exist ".venv\Scripts\python.exe" (
 )
 
 echo [2/3] 检查依赖...
-".venv\Scripts\python.exe" -c "import flask, flask_cors, requests, faster_whisper, ctranslate2, sherpa_onnx" >nul 2>&1
+".venv\Scripts\python.exe" -c "import flask, flask_cors, requests, av, sherpa_onnx" >nul 2>&1
 if errorlevel 1 (
-    echo 首次运行需要安装依赖（约 400MB），请耐心等待...
+    echo 首次运行需要安装依赖（约 200MB），请耐心等待...
     rem 不升级 pip：新版 pip 解析部分国内镜像会直接返回空版本列表
     ".venv\Scripts\python.exe" -m pip install -r requirements.txt -i %MIRROR%
     if errorlevel 1 (
@@ -45,10 +45,10 @@ if errorlevel 1 (
             exit /b 1
         )
     )
-    ".venv\Scripts\python.exe" -c "import flask, flask_cors, requests, faster_whisper, ctranslate2"
+    ".venv\Scripts\python.exe" -c "import flask, flask_cors, requests, av, sherpa_onnx"
     if errorlevel 1 (
         echo.
-        echo 依赖装上了但导入失败，通常是 ctranslate2 与当前 Python 版本不匹配。
+        echo 依赖装上了但导入失败，通常是 sherpa-onnx 与当前 Python 版本不匹配。
         echo 解决办法：安装 Python 3.12 后删除 .venv 目录，重新运行本脚本。
         echo.
         pause
@@ -56,10 +56,15 @@ if errorlevel 1 (
     )
 )
 
-rem sherpa-onnx 装不上不阻断启动：会自动退回 whisper，只是慢很多
+rem 只剩一个后端了，sherpa-onnx 装不上就没得退，直接在这里拦住
 ".venv\Scripts\python.exe" -c "import sherpa_onnx" >nul 2>&1
 if errorlevel 1 (
-    echo   [提示] sherpa-onnx 未装上，将改用 whisper 后端：能用，但慢约 10 倍。
+    echo.
+    echo sherpa-onnx 未装上，没有备用后端可用。
+    echo 解决办法：删除 .venv 目录后重新运行本脚本；仍失败请检查网络与 Python 版本。
+    echo.
+    pause
+    exit /b 1
 )
 
 echo [3/3] 启动服务...

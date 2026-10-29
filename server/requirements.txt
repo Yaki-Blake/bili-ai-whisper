@@ -2,13 +2,10 @@ flask>=3.0.0
 flask-cors>=4.0.0
 requests>=2.31.0
 
-# 默认后端：SenseVoice-Small 走 ONNX Runtime，中文比 whisper-small 准，
-# CPU 上快约 10 倍。wheel 只有 2MB，模型 228MB 在首次转写时自动下载。
+# 唯一后端：SenseVoice-Small 走 sherpa-onnx（wheel 自带 onnxruntime.dll，
+# 不依赖 pip 的 onnxruntime 包）。模型 228MB 在首次转写时自动下载。
 sherpa-onnx>=2.0.0
 
-# 备用后端：sherpa-onnx 装不上时自动退回这个，功能不变但慢很多。
-faster-whisper>=1.1.0
-
-# PyAV 19 移除了 av.open(metadata_errors=...) 参数，而 faster-whisper 1.2.x
-# 仍在传它，装上 av 19 会在解码阶段直接 TypeError。必须压在 19 以下。
+# PyAV 只用来把音轨解码成 16kHz 单声道（audio_util.py），不再服务于 whisper。
+# 仍然压在 19 以下：解码路径是在 av 18 上验证的，没有理由为升级去冒险。
 av>=12,<19

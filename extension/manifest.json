@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "bili-ai-whisper · B站字幕补全",
-  "version": "0.4.0",
-  "description": "B站无字幕视频的本地转写字幕：有官方字幕时自动让路（可一键切换），没字幕时用本地 Whisper 边转边出。",
+  "version": "0.4.1",
+  "description": "B站无字幕视频的本地转写字幕：有官方字幕时自动让路（可一键切换），没字幕时用本地 SenseVoice 边转边出。",
   "minimum_chrome_version": "111",
   "permissions": [
     "storage",

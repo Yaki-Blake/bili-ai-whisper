@@ -80,39 +80,14 @@
 
   <div class="card">
     <h2>识别参数</h2>
-    <div class="field">
-      <label>默认模型</label>
-      <select id="defaultModel">
-        <option value="tiny">tiny — 最快，质量一般</option>
-        <option value="base">base — 较快</option>
-        <option value="small">small — 推荐，平衡</option>
-        <option value="medium">medium — 更准，慢 2–3 倍</option>
-        <option value="large-v3">large-v3 — 最准，需要 GPU</option>
-      </select>
-    </div>
-    <div class="field">
-      <label>计算设备</label>
-      <select id="device">
-        <option value="cpu">CPU（int8）</option>
-        <option value="cuda">GPU（需要 CUDA 库）</option>
-      </select>
-    </div>
-    <div class="field">
-      <label>计算精度</label>
-      <select id="computeType">
-        <option value="int8">int8 — CPU 推荐</option>
-        <option value="float16">float16 — GPU 推荐</option>
-        <option value="int8_float16">int8_float16 — GPU 省显存</option>
-      </select>
-    </div>
     <div class="hint">
-      首次使用某个模型会自动下载（small 约 500 MB）。模型缓存在
-      <code>%LOCALAPPDATA%\bili-sub</code> 与 HuggingFace 缓存目录。
+      唯一后端 <b>SenseVoice-Small</b>（int8 / CPU），不支持切换模型或设备。<br />
+      模型随首次转写自动下载，约 228 MB，缓存在
+      <code>%LOCALAPPDATA%\bili-ai-whisper\cache\models\sensevoice</code>。
     </div>
     <div class="note">
-      选 GPU 前需要先安装 CUDA 运行库：<br />
-      <code>pip install nvidia-cublas-cu12 nvidia-cudnn-cu12</code><br />
-      装不上或报 DLL 错误时，把设备改回 CPU 即可，功能不受影响。
+      原来这里有「默认模型 / 计算设备 / 计算精度」三项，只对 faster-whisper 有效，
+      v0.4.1 起随兜底后端一起移除。
     </div>
   </div>
 

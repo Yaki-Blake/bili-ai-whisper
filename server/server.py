@@ -1,4 +1,4 @@
-"""本地服务：音频下载 + faster-whisper 转写 + 增量结果推送。
+"""本地服务：音频下载 + SenseVoice 转写 + 增量结果推送。
 
 为什么是「提交任务 + 轮询」而不是一个同步接口：
 MV3 的 service worker 会被回收，浏览器侧也无法可靠维持几分钟的挂起请求。
@@ -56,32 +56,14 @@ def _prune_jobs() -> None:
         JOBS.pop(k, None)
 
 
-def _resolve_backend(cfg: dict) -> str:
-    """决定这次用哪个后端。auto 时优先 SenseVoice。
-
-    只看包能不能 import，不看模型下没下——下载是在转写过程里做的，
-    提前检查会让首次使用反而退回 whisper（那正好是模型还没下的时刻）。
-    """
-    want = str(cfg.get("backend") or "auto").strip().lower()
-    if want in ("whisper", "sensevoice"):
-        return want
-    try:
-        import asr_sensevoice
-
-        return "sensevoice" if asr_sensevoice.available() else "whisper"
-    except Exception:  # noqa: BLE001
-        return "whisper"
+BACKEND = "sensevoice"
+# 缓存文件名里的后端标识。转写结果不能跨后端顶替，改后端就等于换缓存键。
+MODEL_KEY = BACKEND
 
 
-def _backend_ready(backend: str) -> bool:
-    if backend == "sensevoice":
-        try:
-            import asr_sensevoice
-
-            return asr_sensevoice.available()
-        except Exception:  # noqa: BLE001
-            return False
-    return asr.available()
+def _backend_ready(backend: str = BACKEND) -> bool:
+    """只看包能不能 import，不看模型下没下——下载是在转写过程里做的。"""
+    return backend == BACKEND and asr.available()
 
 
 def _cache_file(cid: str, model: str) -> Path:
@@ -200,8 +182,6 @@ def _worker(job_id: str, payload: dict) -> None:
             job["message"] = "准备模型…"
             job["progress"] = 0.06
 
-            duration = float(payload.get("duration") or 0)
-
             def on_stage(text: str) -> None:
                 job["message"] = text
 
@@ -210,19 +190,11 @@ def _worker(job_id: str, payload: dict) -> None:
                 job["progress"] = max(job["progress"], 0.06 + ratio * 0.92)
                 job["message"] = f"转写中 · {len(segs)} 句"
 
-            cfg_now = config.load()
-            backend = _resolve_backend(cfg_now)
             segments = asr.transcribe(
                 str(audio_path),
-                # model 是缓存键，可能是 "sensevoice"；whisper 后端要用真实的模型名
-                model_name=cfg_now.get("default_model") or "small",
-                duration=duration,
                 on_progress=on_progress,
                 should_cancel=lambda: job["cancel"],
                 on_stage=on_stage,
-                vad=bool(cfg_now.get("vad", False)),
-                beam_size=int(cfg_now.get("beam_size", 1)),
-                backend=backend,
             )
 
             if job["cancel"]:
@@ -258,18 +230,17 @@ def _worker(job_id: str, payload: dict) -> None:
 @app.get("/health")
 def health():
     cfg = config.load()
-    backend = _resolve_backend(cfg)
     return jsonify(
         {
             "ok": True,
-            "version": "0.4.0",
-            "asr_ready": _backend_ready(backend),
-            "asr_model": "sensevoice"
-            if backend == "sensevoice"
-            else (asr.loaded_model_name() or cfg.get("default_model", "small")),
+            "version": "0.4.1",
+            "asr_ready": _backend_ready(),
+            "asr_model": MODEL_KEY,
             "device": cfg.get("device", "cpu"),
-            "backend": "sensevoice" if backend == "sensevoice" else "faster-whisper",
-            "asr_backend": backend,
+            "backend": BACKEND,
+            "asr_backend": BACKEND,
+            # 不可用时把原因给出来，弹窗直接显示，省得去翻 server.log
+            "error": "" if _backend_ready() else asr.unavailable_reason(),
         }
     )
 
@@ -281,15 +252,10 @@ def submit_asr():
     if not cid:
         return jsonify({"error": "缺少 cid"}), 400
 
-    cfg = config.load()
-    backend = _resolve_backend(cfg)
-    whisper_model = data.get("model") or cfg.get("default_model") or "small"
-    # 两个后端的转写结果不能互相顶替，缓存文件名带上后端：
-    #   {cid}__sensevoice.json  /  {cid}__small.json
-    model = "sensevoice" if backend == "sensevoice" else whisper_model
+    if not asr.available():
+        return jsonify({"error": f"{asr.unavailable_reason()}，请先执行 pip install -r requirements.txt"}), 503
 
-    if backend == "whisper" and not asr.available():
-        return jsonify({"error": "faster-whisper 未安装，请先执行 pip install -r requirements.txt"}), 503
+    model = MODEL_KEY
 
     # 同一 cid 已有任务在跑时直接复用，避免连播来回切换导致重复排队
     with JOBS_LOCK:
@@ -385,12 +351,11 @@ def index():
 if __name__ == "__main__":
     cfg = config.load()
     port = int(cfg.get("port", 8765))
-    backend = _resolve_backend(cfg)
-    label = "SenseVoice int8" if backend == "sensevoice" else f"faster-whisper {cfg.get('default_model', 'small')}"
+    ready = _backend_ready()
     print("=" * 56)
     print("  bili-ai-whisper · 本地字幕服务")
     print(f"  监听  http://127.0.0.1:{port}")
-    print(f"  后端  {label}" + ("" if _backend_ready(backend) else "（不可用）"))
+    print(f"  后端  SenseVoice int8" + ("" if ready else f"（不可用：{asr.unavailable_reason()}）"))
     print(f"  设备  {cfg.get('device', 'cpu')} / {cfg.get('compute_type', 'int8')}")
     print("=" * 56)
     app.run(host="127.0.0.1", port=port, threaded=True, debug=False)
