@@ -54,6 +54,8 @@ bili-ai-whisper/
 
 窗口之后不再输出，日志都写进 `server.log`。
 
+依赖只装在 `server\.venv` 里，模型在 `%LOCALAPPDATA%\bili-ai-whisper\cache`，不改系统环境、不装后台服务。不想要了直接删掉这两个目录即可。
+
 **看视频**
 
 打开无字幕的 B站视频 → 点播放 → 右下角出现「字」球 → 约 5 秒出第一句，之后边转边补。

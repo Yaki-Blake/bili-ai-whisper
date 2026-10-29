@@ -54,6 +54,8 @@ You are ready when you see:
 
 The window goes quiet after that; all logs go to `server.log`.
 
+Dependencies live only in `server\.venv` and the model in `%LOCALAPPDATA%\bili-ai-whisper\cache`. Nothing touches your system environment and no background service is installed — to remove everything, just delete those two folders.
+
 **Watch a video**
 
 Open a Bilibili video without subtitles → press play → a "字" ball appears in the bottom right → first line in about 5 seconds, the rest stream in as it transcribes.
