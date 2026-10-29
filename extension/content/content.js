@@ -11,7 +11,7 @@
   window.__BILI_SUB_LOADED__ = true;
 
   const CHANNEL = '__bili_sub_bridge__';
-  const VER = '0.3.1';
+  const VER = '0.4.0';
 
   const state = {
     cid: null,

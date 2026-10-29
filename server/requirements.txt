@@ -1,6 +1,12 @@
 flask>=3.0.0
 flask-cors>=4.0.0
 requests>=2.31.0
+
+# 默认后端：SenseVoice-Small 走 ONNX Runtime，中文比 whisper-small 准，
+# CPU 上快约 10 倍。wheel 只有 2MB，模型 228MB 在首次转写时自动下载。
+sherpa-onnx>=2.0.0
+
+# 备用后端：sherpa-onnx 装不上时自动退回这个，功能不变但慢很多。
 faster-whisper>=1.1.0
 
 # PyAV 19 移除了 av.open(metadata_errors=...) 参数，而 faster-whisper 1.2.x

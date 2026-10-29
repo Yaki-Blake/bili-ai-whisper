@@ -10,6 +10,9 @@ BASE_DIR = Path(__file__).resolve().parent
 CONFIG_PATH = BASE_DIR / "config.json"
 
 DEFAULTS = {
+    # auto    优先 SenseVoice（中文更准、CPU 更快），不可用时自动退回 whisper
+    # sensevoice / whisper 强制指定，便于对照排查
+    "backend": "auto",
     "default_model": "small",
     "device": "cpu",
     "compute_type": "int8",

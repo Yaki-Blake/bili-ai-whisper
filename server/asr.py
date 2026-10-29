@@ -16,6 +16,10 @@ import time
 from pathlib import Path
 from typing import Callable
 
+import numpy as np
+
+from audio_util import load_pcm_16k
+
 # 必须在 import huggingface_hub 之前设置，否则不生效。
 # 国内直连 huggingface.co 基本拿不到模型，卡在「加载模型…」直到超时，
 # 这是 faster-whisper 在国内最容易踩的坑。镜像可在 config.json 覆盖。
@@ -202,8 +206,84 @@ def transcribe(
     on_stage: Callable[[str], None] | None = None,
     vad: bool = False,
     beam_size: int = 1,
+    backend: str = "auto",
 ) -> list[dict]:
-    """返回 [{start, end, text}]，并在过程中通过 on_progress 推送增量。
+    """按 backend 分发到具体实现，返回 [{start, end, text}]。
+
+    backend:
+      auto       优先 SenseVoice，装了就用；出错自动退回 whisper（默认）
+      sensevoice 强制 SenseVoice，失败直接抛错，便于排查
+      whisper    强制 faster-whisper
+
+    vad / beam_size / model_name 只对 whisper 后端有意义。SenseVoice 是
+    非自回归模型，没有 beam search，也不吃 external prompt。
+    """
+    backend = (backend or "auto").strip().lower()
+
+    if backend in ("auto", "sensevoice"):
+        try:
+            return _run_sensevoice(audio_path, on_progress, should_cancel, on_stage)
+        except Exception as exc:  # noqa: BLE001
+            if backend == "sensevoice":
+                raise
+            # auto 模式：SenseVoice 环境没备好（没装包、模型下不下来）时
+            # 不能让整个功能不可用，退回 whisper 继续出字幕
+            if on_stage:
+                on_stage(f"SenseVoice 不可用（{exc}），改用 whisper {model_name}")
+
+    return _run_whisper(
+        audio_path,
+        model_name=model_name,
+        duration=duration,
+        device=device,
+        compute_type=compute_type,
+        on_progress=on_progress,
+        should_cancel=should_cancel,
+        on_stage=on_stage,
+        vad=vad,
+        beam_size=beam_size,
+    )
+
+
+def _run_sensevoice(
+    audio_path: str,
+    on_progress: Callable[[list[dict], float], None] | None,
+    should_cancel: Callable[[], bool] | None,
+    on_stage: Callable[[str], None] | None,
+) -> list[dict]:
+    import asr_sensevoice  # 延迟导入：只用 whisper 时不必加载 onnxruntime
+
+    if not asr_sensevoice.available():
+        raise RuntimeError(asr_sensevoice._state.get("error") or "sherpa-onnx 未安装")
+
+    if on_stage:
+        on_stage("解码音频…")
+    samples = load_pcm_16k(audio_path)
+    if not len(samples):
+        raise RuntimeError("音频解码后为空，无法转写")
+
+    return asr_sensevoice.transcribe(
+        samples,
+        sample_rate=16000,
+        on_progress=on_progress,
+        should_cancel=should_cancel,
+        on_stage=on_stage,
+    )
+
+
+def _run_whisper(
+    audio_path: str,
+    model_name: str = "small",
+    duration: float = 0.0,
+    device: str | None = None,
+    compute_type: str | None = None,
+    on_progress: Callable[[list[dict], float], None] | None = None,
+    should_cancel: Callable[[], bool] | None = None,
+    on_stage: Callable[[str], None] | None = None,
+    vad: bool = False,
+    beam_size: int = 1,
+) -> list[dict]:
+    """faster-whisper 实现。
 
     vad 默认关闭。实测 silero VAD（onnxruntime 后端）在本机把 176s 音频里的
     168s 判成静音，只吐出开头一句——开着等于功能报废。改用「关闭 VAD +
@@ -225,8 +305,17 @@ def transcribe(
         kwargs["vad_filter"] = True
         kwargs["vad_parameters"] = {"min_silence_duration_ms": 500}
 
+    # 显式解成 16k 单声道再喂模型，省掉 whisper 内部的重采样。
+    # 传 ndarray 时 info.duration 仍按采样数算，进度计算不受影响。
+    if isinstance(audio_path, np.ndarray):
+        samples = audio_path
+    else:
+        if on_stage:
+            on_stage("解码音频…")
+        samples = load_pcm_16k(audio_path)
+
     segments, info = model.transcribe(
-        audio_path,
+        samples,
         language="zh",
         task="transcribe",
         beam_size=max(1, int(beam_size)),

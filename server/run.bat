@@ -28,7 +28,7 @@ if not exist ".venv\Scripts\python.exe" (
 )
 
 echo [2/3] 检查依赖...
-".venv\Scripts\python.exe" -c "import flask, flask_cors, requests, faster_whisper, ctranslate2" >nul 2>&1
+".venv\Scripts\python.exe" -c "import flask, flask_cors, requests, faster_whisper, ctranslate2, sherpa_onnx" >nul 2>&1
 if errorlevel 1 (
     echo 首次运行需要安装依赖（约 400MB），请耐心等待...
     rem 不升级 pip：新版 pip 解析部分国内镜像会直接返回空版本列表
@@ -54,6 +54,12 @@ if errorlevel 1 (
         pause
         exit /b 1
     )
+)
+
+rem sherpa-onnx 装不上不阻断启动：会自动退回 whisper，只是慢很多
+".venv\Scripts\python.exe" -c "import sherpa_onnx" >nul 2>&1
+if errorlevel 1 (
+    echo   [提示] sherpa-onnx 未装上，将改用 whisper 后端：能用，但慢约 10 倍。
 )
 
 echo [3/3] 启动服务...

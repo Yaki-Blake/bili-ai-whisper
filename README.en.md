@@ -6,6 +6,8 @@
 
 Bilibili local subtitle filler — Chinese subtitles for videos that have none. Everything runs locally, audio is never uploaded.
 
+The default backend is **SenseVoice-Small** (more accurate on Chinese than whisper, roughly 25–35× realtime on CPU). It falls back to faster-whisper automatically when unavailable.
+
 ## 1. Layout
 
 ```
@@ -22,7 +24,9 @@ bili-ai-whisper/
 │   └── options/            options page
 └── server/                 local server (Flask)
     ├── server.py           routes + job queue
-    ├── asr.py              faster-whisper wrapper, hallucination filtering
+    ├── asr.py              backend dispatch, whisper wrapper, hallucination filtering
+    ├── asr_sensevoice.py   SenseVoice chunked decoding, sentence splitting
+    ├── audio_util.py       decodes everything to 16k mono
     ├── bili.py             audio download, signing fallback
     ├── config.py           config read/write
     ├── selftest.py         API self test
@@ -40,10 +44,10 @@ bili-ai-whisper/
 
 **Start the server**
 
-Double-click `server\run.bat`. First run downloads about 880 MB in total:
+Double-click `server\run.bat`. First run downloads about 630 MB in total:
 
 - Python dependencies　~400 MB
-- The `small` model　~480 MB
+- The SenseVoice model　~228 MB
 
 You are ready when you see:
 
@@ -58,7 +62,7 @@ Dependencies live only in `server\.venv` and the model in `%LOCALAPPDATA%\bili-a
 
 **Watch a video**
 
-Open a Bilibili video without subtitles → press play → a "字" ball appears in the bottom right → first line in about 5 seconds, the rest stream in as it transcribes.
+Open a Bilibili video without subtitles → press play → a "字" ball appears in the bottom right → first line in about 2 seconds, the rest stream in as it transcribes.
 
 Grey ball with a notice bar underneath means the video has official subtitles and the extension stood down. The bar has two buttons: `Open official subtitles` and `Switch to AI subtitles`.
 
@@ -71,14 +75,15 @@ Click the ball to change font size, re-run, export SRT or clear the cache.
 - Only regular Bilibili videos, playlist pages and bangumi pages; other sites do not work
 - Windows only
 - Chinese transcription only; no translation for foreign-language videos
-- Accuracy is poor — currently only good enough to follow along
+- Everyday speech is readable, but technical terms still break: `void *` comes out as 「word新」, `字节` occasionally as 「字己」
 - A logged-out account gets no AI subtitle list, so "cannot query" is misread as "none"
 - DRM-protected bangumi/movie content may return no audio stream from `playurl`
 
 **Performance**
 
-- CPU with the `small` model runs at ~2.4–4× realtime: a 20-minute video takes 5–8 minutes (the first line arrives in 5 seconds, so you can start watching)
-- `medium` is more accurate but 2–3× slower
+- SenseVoice runs at ~25–35× realtime: a 20-minute video takes ~40 s, a 50-minute one ~90 s. Measured end to end: 176 s of audio in 6.6 s, model load included
+- The faster-whisper fallback only manages 2–8× realtime and will fall behind playback
+- Decoding loads the whole track into memory: ~230 MB for one hour of audio
 
 **Environment traps (handled in code, may reappear on another machine)**
 
@@ -86,6 +91,7 @@ Click the ball to change font size, re-run, export SRT or clear the cache.
 - With Windows console QuickEdit on, selecting text with the mouse freezes every request. stdout is redirected to `server.log` to work around it
 - VAD on this machine classified speech as silence and emitted a single line. Off by default
 - Model loading used to verify over the network and failed on any hiccup. Now loaded straight from the local path
+- SenseVoice token timestamps drift on "long chunk + long silence" — a 10-second line can be labelled 25 seconds. Fixed with 20-second chunks plus a break on any pause over 2 seconds
 
 ## 4. How the code works
 
@@ -97,7 +103,9 @@ content.js  isolated world: detects official subtitles → stands down or starts
    │ chrome.runtime
 background  only forwards short requests to localhost:8765
    │ HTTP
-server.py   downloads the audio track → faster-whisper → returns cues incrementally
+server.py   downloads the audio track → dispatches by backend → returns cues incrementally
+              ├─ SenseVoice (default)  20-second chunks, split on punctuation and pauses
+              └─ faster-whisper       fallback, never reached once sherpa-onnx is installed
 ```
 
 ## 5. Disclaimer
