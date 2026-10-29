@@ -1,10 +1,10 @@
-<p align="center">
-  <a href="README.md">简体中文</a> · <b>English</b>
+<p align="center">  
+  <a href="README.md">简体中文</a> · <b>English</b>  
 </p>
 
 # Bili Local Subtitle
 
-Chinese subtitles for Bilibili videos that have none. Everything runs on your machine — audio is never uploaded.
+Chinese subtitles for Bilibili videos that have none. Everything runs locally — audio is never uploaded.
 
 ## 1. Layout
 
@@ -30,11 +30,9 @@ bili-sub/
     └── run.bat             creates .venv, installs deps, downloads model on first run
 ```
 
-`.venv`, `server.log`, `config.json` and the model cache are in `.gitignore`.
-
 ## 2. Usage
 
-**Install the extension** (use Chrome, not Edge — see section 3)
+**Install the extension** (Chrome recommended, see section 3)
 
 1. Open `chrome://extensions/` and enable **Developer mode** (top right)
 2. **Load unpacked** → pick the `extension` folder
@@ -42,7 +40,12 @@ bili-sub/
 
 **Start the server**
 
-Double-click `server\run.bat`. First run creates a virtualenv, installs dependencies (~400 MB) and downloads the model (~480 MB). You are ready when you see:
+Double-click `server\run.bat`. First run downloads about 880 MB in total:
+
+- Python dependencies　~400 MB
+- The `small` model　~480 MB
+
+You are ready when you see:
 
 ```
   服务地址   http://127.0.0.1:8765
@@ -53,7 +56,7 @@ The window goes quiet after that; all logs go to `server.log`.
 
 **Watch a video**
 
-Open a Bilibili video without subtitles → press play → a "字" ball appears bottom right → first line in about 5 seconds, the rest stream in as it transcribes.
+Open a Bilibili video without subtitles → press play → a "字" ball appears in the bottom right → first line in about 5 seconds, the rest stream in as it transcribes.
 
 Grey ball with a notice bar underneath means the video has official subtitles and the extension stood down. The bar has two buttons: `Open official subtitles` and `Switch to AI subtitles`.
 
@@ -63,22 +66,23 @@ Click the ball to change font size, re-run, export SRT or clear the cache.
 
 **Functionality**
 
-- Only regular Bilibili videos, playlist pages and bangumi pages. No other sites
+- Only regular Bilibili videos, playlist pages and bangumi pages; other sites do not work
+- Windows only
 - Chinese transcription only; no translation for foreign-language videos
-- No terminology correction — Whisper is consistently wrong on technical terms
+- Accuracy is poor — currently only good enough to follow along
 - A logged-out account gets no AI subtitle list, so "cannot query" is misread as "none"
 - DRM-protected bangumi/movie content may return no audio stream from `playurl`
 
 **Performance**
 
-- CPU with the `small` model runs at ~2.4–4× realtime: a 20-minute video takes 5–8 minutes (though the first line is there in 5 seconds, so you can start watching)
+- CPU with the `small` model runs at ~2.4–4× realtime: a 20-minute video takes 5–8 minutes (the first line arrives in 5 seconds, so you can start watching)
 - `medium` is more accurate but 2–3× slower
 
 **Environment traps (handled in code, may reappear on another machine)**
 
-- Some Edge builds **globally refuse extension injection** and return `Blocked` on every site, unrelated to the code — use Chrome
+- Some Edge builds **globally refuse extension injection** and return `Blocked` on every site, unrelated to the code — switch to Chrome
 - With Windows console QuickEdit on, selecting text with the mouse freezes every request. stdout is redirected to `server.log` to work around it
-- VAD on this machine classified speech as silence and emitted one line. Off by default
+- VAD on this machine classified speech as silence and emitted a single line. Off by default
 - Model loading used to verify over the network and failed on any hiccup. Now loaded straight from the local path
 
 ## 4. How the code works
@@ -94,12 +98,10 @@ background  only forwards short requests to localhost:8765
 server.py   downloads the audio track → faster-whisper → returns cues incrementally
 ```
 
-Four key decisions:
+## 5. Disclaimer
 
-**1. Video identity does not come from the URL.** Playlist pages (`/list/`) carry no BV id in the address, so `fetch` and `XMLHttpRequest` are hooked and `aid` / `cid` are sniffed from the player request — works on all three page types.
+This project is for personal study and technical research only. It does not download, store or redistribute any video content; audio is processed locally and temporarily, and nothing is uploaded to any server. Please comply with Bilibili's terms of service and applicable laws. Any consequences arising from use are borne by the user.
 
-**2. Only `wbi/v2`, plus result validation.** A wrong signature on that endpoint **still returns `code: 0`** and silently drops the data. So besides signing correctly, the result is checked against last-cue-timestamp vs video duration before it is trusted.
+## 6. License
 
-**3. Transcription runs as a job.** MV3 service workers get reclaimed, which kills long connections. So: submit a job, get a `job_id`, poll once a second — which also gives streaming output for free.
-
-**4. Stand down first, override on request.** With official subtitles present the extension exits and leaves a thin notice under the player; only when the user clicks "switch to AI subtitles" does it set `forceAsr` and take over. Transcripts are cached by `cid`, so re-watching is instant.
+MIT — see [LICENSE](LICENSE).
