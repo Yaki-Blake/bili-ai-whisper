@@ -6,8 +6,6 @@
 
 Bilibili local subtitle filler — Chinese subtitles for videos that have none. Everything runs locally, audio is never uploaded.
 
-The backend is **SenseVoice-Small** only (more accurate on Chinese than whisper, roughly 25–35× realtime on CPU). v0.4.1 dropped the faster-whisper fallback, cutting the dependency footprint from ~343 MB to ~205 MB.
-
 ## 1. Layout
 
 ```
